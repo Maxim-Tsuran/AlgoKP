@@ -29,8 +29,10 @@ public class GooseMessageBuilder {
         buffer.put(dstMac);
         buffer.put(srcMac);
         buffer.putShort(etherType);
+        int gooseStart = buffer.position(); // Здесь начинается нужная нам длина для поля length
         buffer.putShort(appId);
-
+        // Сохраняем позицию, куда потом вставим длину
+        int gooseLengthPos = buffer.position();
 
 
         // Placeholder for GOOSE payload
@@ -60,7 +62,8 @@ public class GooseMessageBuilder {
 //        buffer.get(gooseMessage);
 //
 //        return gooseMessage;
-                byte[] dummyGooseData = new byte[] {0x00, (byte) 0x80, 0x00, 0x00, 0x00, 0x00}; // Заглушка (BER тип 0x61)
+        byte[] dummyGooseData = new byte[] {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // Заглушка для length
+        // (в будущем переписываем) и goose.reserve
         buffer.put(dummyGooseData);
         // GOOSE PDU (TLV-кодировка ASN.1 BER)
         ByteBuffer goosePayload = ByteBuffer.allocate(1400);
@@ -69,17 +72,51 @@ public class GooseMessageBuilder {
         goosePayload.put(encodeTLV((byte) 0x81, toUInt(pdu.getTimeAllowedToLive())));
         goosePayload.put(encodeTLV((byte) 0x82, pdu.getDatSet().getBytes()));
         goosePayload.put(encodeTLV((byte) 0x83, pdu.getGoID().getBytes()));
-        goosePayload.put(encodeTLV((byte) 0x84, parseTimestamp(pdu.getT()))); // t
+        goosePayload.put(encodeTLV((byte) 0x84, parseTimestamp(pdu.updateTimestamp()))); // t
         goosePayload.put(encodeTLV((byte) 0x85, toUInt(pdu.getStNum())));
         goosePayload.put(encodeTLV((byte) 0x86, toUInt(pdu.getSqNum())));
-        goosePayload.put(encodeTLV((byte) 0x87, new byte[]{(byte) (pdu.isSimulation() ? 0x01 : 0x00)}));
+        goosePayload.put(encodeTLV((byte) 0x87, new byte[] {(byte) (pdu.isSimulation() ? 0x01 : 0x00)}));
         goosePayload.put(encodeTLV((byte) 0x88, toUInt(pdu.getConfRev())));
-        goosePayload.put(encodeTLV((byte) 0x89, new byte[]{(byte) (pdu.isNdsCom() ? 0x01 : 0x00)}));
+        goosePayload.put(encodeTLV((byte) 0x89, new byte[] {(byte) (pdu.isNdsCom() ? 0x01 : 0x00)}));
         goosePayload.put(encodeTLV((byte) 0x8a, toUInt(pdu.getNumDatSetEntries())));
+        // Boolean
+        byte boolTag = (byte) 0x83;
+        byte boolLength = 0x01;
+        byte boolValue = (byte) (Boolean.parseBoolean(pdu.getAllData().get(0).getValue()) ? 0x01 : 0x00);
+        byte[] boolTLV = new byte[] { boolTag, boolLength, boolValue };
 
+        // Integer (4 байта)
+        byte intTag = (byte) 0x85;
+        byte[] intValueBytes = ByteBuffer.allocate(4).putInt(
+                Integer.parseInt(pdu.getAllData().get(1).getValue())
+        ).array();
+        byte[] intTLV = new byte[1 + 1 + 4]; // tag + length + 4 bytes
+        intTLV[0] = intTag;
+        intTLV[1] = 0x04;
+        System.arraycopy(intValueBytes, 0, intTLV, 2, 4);
 
-        // allData (заглушка на 1 bool = false)
-        goosePayload.put(encodeTLV((byte) 0xab, new byte[]{(byte) 0x83, 0x01, 0x00}));
+        // Float (4 байта)
+        byte floatTag = (byte) 0x87;
+        byte[] floatValueBytes = ByteBuffer.allocate(4).putFloat(
+                Float.parseFloat(pdu.getAllData().get(2).getValue())
+        ).array();
+        byte[] floatTLV = new byte[1 + 1 + 4];
+        floatTLV[0] = floatTag;
+        floatTLV[1] = 0x04;
+        System.arraycopy(floatValueBytes, 0, floatTLV, 2, 4);
+
+        // Собираем всё вместе в один allData-блок
+        byte[] allData = new byte[boolTLV.length + intTLV.length + floatTLV.length];
+        int pos = 0;
+        System.arraycopy(boolTLV, 0, allData, pos, boolTLV.length);
+        pos += boolTLV.length;
+        System.arraycopy(intTLV, 0, allData, pos, intTLV.length);
+        pos += intTLV.length;
+        System.arraycopy(floatTLV, 0, allData, pos, floatTLV.length);
+
+        // Оборачиваем всё в тег allData (0xAB)
+        goosePayload.put(encodeTLV((byte) 0xAB, allData));
+
 
         int gooseLength = goosePayload.position();
         byte[] gooseData = new byte[gooseLength];
@@ -90,6 +127,13 @@ public class GooseMessageBuilder {
         buffer.put((byte) 0x61);
         buffer.put(encodeLength(gooseData.length));
         buffer.put(gooseData);
+
+        int totalGooseLength = buffer.position() - gooseStart;
+        System.out.println("GOOSE длина (с APPID до конца): " + totalGooseLength + " байт");
+
+        // Возвращаемся и записываем длину после APPID
+        buffer.putShort(gooseLengthPos, (short) (totalGooseLength));
+
 
         byte[] gooseMessage = new byte[buffer.position()];
         buffer.flip();
@@ -109,8 +153,24 @@ public class GooseMessageBuilder {
         return bytes;
     }
 
+//    private byte[] toUInt(int value) {
+//        return ByteBuffer.allocate(4).putInt(value).array();
+//    }
+
     private byte[] toUInt(int value) {
-        return ByteBuffer.allocate(4).putInt(value).array();
+        if (value <= 0xFF) {
+            return new byte[]{(byte) value};
+        } else if (value <= 0xFFFF) {
+            return ByteBuffer.allocate(2).putShort((short) value).array();
+        } else if (value <= 0xFFFFFF) {
+            return new byte[]{
+                    (byte) ((value >> 16) & 0xFF),
+                    (byte) ((value >> 8) & 0xFF),
+                    (byte) (value & 0xFF)
+            };
+        } else {
+            return ByteBuffer.allocate(4).putInt(value).array();
+        }
     }
 
     private byte[] encodeTLV(byte tag, byte[] value) {
@@ -135,21 +195,32 @@ public class GooseMessageBuilder {
     // Конвертация строки времени формата "Jan  2, 2000 02:47:29.927595853 UTC"
     private byte[] parseTimestamp(String t) {
         try {
-            // Нормализуем пробелы (убираем двойные пробелы)
+            // Убираем лишние пробелы
             t = t.replaceAll(" +", " ");
 
-            // Используем правильный шаблон с наносекундами и зоной UTC
+            // Парсим с наносекундами и зоной
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy HH:mm:ss.nnnnnnnnn z", Locale.ENGLISH);
             ZonedDateTime zdt = ZonedDateTime.parse(t, formatter);
 
-            // Получаем наносекунды с начала эпохи (1970)
-            long nanos = zdt.toInstant().getEpochSecond() * 1_000_000_000L + zdt.getNano();
+            Instant instant = zdt.toInstant();
 
-            return ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(nanos).array();
+            long epochSeconds = instant.getEpochSecond(); // первые 4 байта
+            int nano = instant.getNano();                 // наносекунды (0-999_999_999)
+
+            // По стандарту: дробная часть = (nanos / 1_000_000_000.0) * 2^32
+            long fractionOfSecond = (long) ((nano / 1_000_000_000.0) * Math.pow(2, 32));
+
+            ByteBuffer buffer = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);
+            buffer.putInt((int) epochSeconds);          // секунды (4 байта)
+            buffer.putInt((int) fractionOfSecond);      // дробная часть (4 байта)
+
+            return buffer.array();
+
         } catch (Exception e) {
             throw new RuntimeException("Ошибка парсинга времени: " + t, e);
         }
     }
+
 
 
 }

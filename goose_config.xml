@@ -17,10 +17,11 @@
         <simulation>true</simulation>
         <ndsCom>false</ndsCom>
         <numDatSetEntries>1</numDatSetEntries>
-        <t>Jan  2, 2000 02:47:29.927595853 UTC</t>
+        <t></t>
         <allData>
             <Data type="boolean">false</Data>
             <Data type="integer">1</Data>
+            <Data type="float">34.092</Data>
         </allData>
     </Pdu>
 </GooseConfig>
