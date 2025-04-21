@@ -1,0 +1,26 @@
+<GooseConfig>
+    <Network>
+        <MacAddressSrc>00:A0:F4:08:2F:77</MacAddressSrc>
+        <MacAddressDst>01:A0:F4:08:2F:77</MacAddressDst>
+        <AppID>0001</AppID>
+        <EtherType>88B8</EtherType>
+    </Network>
+
+    <Pdu>
+        <gocbRef>GEDeviceF650/LLN0$GO$gcb01</gocbRef>
+        <datSet>GEDeviceF650/LLN0$GOOSE1</datSet>
+        <goID>F650_GOOSE1</goID>
+        <timeAllowedToLive>1000</timeAllowedToLive>
+        <confRev>1</confRev>
+        <stNum>1</stNum>
+        <sqNum>2</sqNum>
+        <simulation>false</simulation>
+        <ndsCom>false</ndsCom>
+        <numDatSetEntries>8</numDatSetEntries>
+        <t>Jan  2, 2000 02:47:29.927595853 UTC</t>
+        <allData>
+            <Data type="boolean">false</Data>
+            <Data type="integer">1</Data>
+        </allData>
+    </Pdu>
+</GooseConfig>
