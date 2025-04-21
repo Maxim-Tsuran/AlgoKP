@@ -30,6 +30,7 @@ public class  PduConfig {
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM  d, yyyy HH:mm:ss.SSSSSSSSS 'UTC'", Locale.ENGLISH);
         this.t = formatter.format(utc);
+        System.out.println(t);
         return t;
     }
 

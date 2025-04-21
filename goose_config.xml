@@ -14,9 +14,9 @@
         <confRev>1</confRev>
         <stNum>1</stNum>
         <sqNum>2</sqNum>
-        <simulation>false</simulation>
+        <simulation>true</simulation>
         <ndsCom>false</ndsCom>
-        <numDatSetEntries>8</numDatSetEntries>
+        <numDatSetEntries>1</numDatSetEntries>
         <t>Jan  2, 2000 02:47:29.927595853 UTC</t>
         <allData>
             <Data type="boolean">false</Data>

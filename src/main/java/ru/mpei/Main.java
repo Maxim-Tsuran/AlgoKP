@@ -26,7 +26,7 @@ public class Main {
         System.out.println("Src MAC: " + config.getNetwork().getMacAddressSrc());
         System.out.println("GOID: " + config.getPdu().getGoID());
         System.out.println("Время из PduConfig: " + config.getPdu().getT());
-        System.out.println("Время отправки: " + config.getPdu().updateTimestamp());
+//        System.out.println("Время отправки: " + config.getPdu().updateTimestamp());
         for (DataEntry data : config.getPdu().getAllData()) {
             System.out.println(data.getType() + ": " + data.getValue());
         }
