@@ -10,10 +10,10 @@
         <gocbRef>GEDeviceF650/LLN0$GO$gcb01</gocbRef>
         <datSet>GEDeviceF650/LLN0$GOOSE1</datSet>
         <goID>F650_GOOSE1</goID>
-        <timeAllowedToLive>1000</timeAllowedToLive>
+        <timeAllowedToLive>2000</timeAllowedToLive>
         <confRev>1</confRev>
         <stNum>1</stNum>
-        <sqNum>2</sqNum>
+        <sqNum>0</sqNum>
         <simulation>true</simulation>
         <ndsCom>false</ndsCom>
         <numDatSetEntries>1</numDatSetEntries>
