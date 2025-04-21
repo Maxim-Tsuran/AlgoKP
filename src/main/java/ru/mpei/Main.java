@@ -15,6 +15,7 @@ import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 
+// вставить в консоль true 2 2.34
 public class Main {
 
     static GooseConfig config;
