@@ -9,6 +9,8 @@ import java.nio.ByteOrder;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 public class GooseMessageBuilder {
@@ -51,40 +53,58 @@ public class GooseMessageBuilder {
         goosePayload.put(encodeTLV((byte) 0x88, toUInt(pdu.getConfRev())));
         goosePayload.put(encodeTLV((byte) 0x89, new byte[] {(byte) (pdu.isNdsCom() ? 0x01 : 0x00)}));
         goosePayload.put(encodeTLV((byte) 0x8a, toUInt(pdu.getNumDatSetEntries())));
-        // Boolean
+        // Общий allData-блок
+        List<byte[]> structuredDataList = new ArrayList<>();
+
+        // === 1. Boolean ===
         byte boolTag = (byte) 0x83;
         byte boolLength = 0x01;
         byte boolValue = (byte) (Boolean.parseBoolean(pdu.getAllData().get(0).getValue()) ? 0x01 : 0x00);
         byte[] boolTLV = new byte[] { boolTag, boolLength, boolValue };
 
-        // Integer (4 байта)
+        // Временная метка
+        byte[] tTLV = encodeTLV((byte) 0x91, parseTimestamp(pdu.updateTimestamp()));
+
+        // Качество (bit-string)
+        byte[] qualityTLV = new byte[] { (byte) 0x84, 0x03, 0x03,0x00, 0x10 };  //00000000 00010000 в двоичной = 0x00, 0x10 в 16 системе, последние 3 бита игнорируем, но нужны для заполнения байта
+
+        // Объединяем всё в структуру с тегом 0xA2
+        byte[] structBool = encodeTLV((byte) 0xA2, concatArrays(boolTLV, tTLV, qualityTLV));
+        structuredDataList.add(structBool);
+
+
+        // === 2. Integer ===
         byte intTag = (byte) 0x85;
         byte[] intValueBytes = ByteBuffer.allocate(4).putInt(
                 Integer.parseInt(pdu.getAllData().get(1).getValue())
         ).array();
-        byte[] intTLV = new byte[1 + 1 + 4]; // tag + length + 4 bytes
-        intTLV[0] = intTag;
-        intTLV[1] = 0x04;
-        System.arraycopy(intValueBytes, 0, intTLV, 2, 4);
+        byte[] intTLV = encodeTLV(intTag, intValueBytes);
 
-        // Float (4 байта)
+        byte[] structInt = encodeTLV((byte) 0xA2, concatArrays(intTLV, tTLV, qualityTLV));
+        structuredDataList.add(structInt);
+
+
+        // === 3. Float ===
         byte floatTag = (byte) 0x87;
         byte[] floatValueBytes = ByteBuffer.allocate(4).putFloat(
                 Float.parseFloat(pdu.getAllData().get(2).getValue())
         ).array();
-        byte[] floatTLV = new byte[1 + 1 + 4];
-        floatTLV[0] = floatTag;
-        floatTLV[1] = 0x04;
-        System.arraycopy(floatValueBytes, 0, floatTLV, 2, 4);
+        byte[] floatTLV = encodeTLV(floatTag, floatValueBytes);
 
-        // Собираем всё вместе в один allData-блок
-        byte[] allData = new byte[boolTLV.length + intTLV.length + floatTLV.length];
+        byte[] structFloat = encodeTLV((byte) 0xA2, concatArrays(floatTLV, tTLV, qualityTLV));
+        structuredDataList.add(structFloat);
+
+
+        // === Собираем allData ===
+        int totalLength = 0;
+        for (byte[] item : structuredDataList) totalLength += item.length;
+        byte[] allData = new byte[totalLength];
+
         int pos = 0;
-        System.arraycopy(boolTLV, 0, allData, pos, boolTLV.length);
-        pos += boolTLV.length;
-        System.arraycopy(intTLV, 0, allData, pos, intTLV.length);
-        pos += intTLV.length;
-        System.arraycopy(floatTLV, 0, allData, pos, floatTLV.length);
+        for (byte[] item : structuredDataList) {
+            System.arraycopy(item, 0, allData, pos, item.length);
+            pos += item.length;
+        }
 
         // Оборачиваем всё в тег allData (0xAB)
         goosePayload.put(encodeTLV((byte) 0xAB, allData));
@@ -162,6 +182,20 @@ public class GooseMessageBuilder {
         } else {
             return new byte[]{(byte) 0x81, (byte) length};
         }
+    }
+
+    private static byte[] concatArrays(byte[]... arrays) {
+        int totalLength = 0;
+        for (byte[] arr : arrays) {
+            totalLength += arr.length;
+        }
+        byte[] result = new byte[totalLength];
+        int pos = 0;
+        for (byte[] arr : arrays) {
+            System.arraycopy(arr, 0, result, pos, arr.length);
+            pos += arr.length;
+        }
+        return result;
     }
 
     // Конвертация строки времени формата "Jan  2, 2000 02:47:29.927595853 UTC"
