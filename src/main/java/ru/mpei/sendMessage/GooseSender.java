@@ -7,34 +7,22 @@ import java.util.List;
 
 public class GooseSender {
 
+    boolean interfaceOpen = false;
+    PcapHandle handle = null;
+    PcapNetworkInterface nif = null;
     public void send(byte[] data, String interfaceName) throws PcapNativeException, NotOpenException {
-        // Получаем все доступные интерфейсы
-        List<PcapNetworkInterface> interfaces = Pcaps.findAllDevs();
-
-//        for (PcapNetworkInterface inter:interfaces){
-//            System.out.println(inter);
-//        }
-        PcapNetworkInterface nif = null;
 
 
-        for (PcapNetworkInterface dev : interfaces) {
-            if (dev.getName().equals(interfaceName) || dev.getDescription().contains(interfaceName)) {
-                nif = dev;
-                break;
-            }
+        if (interfaceOpen == false){
+            nif = Pcaps.getDevByName(interfaceName);
+            handle = nif.openLive(65536, PcapNetworkInterface.PromiscuousMode.PROMISCUOUS,10);
+            interfaceOpen = true;
         }
-
-        if (nif == null) {
-            throw new IllegalArgumentException("Сетевой интерфейс не найден: " + interfaceName);
-        }
-
-        PcapHandle handle = nif.openLive(65536, PcapNetworkInterface.PromiscuousMode.PROMISCUOUS,10);
 
         // Оборачиваем массив в UnknownPacket (низкоуровневый кадр)
         UnknownPacket packet = UnknownPacket.newPacket(data, 0, data.length);
 
         handle.sendPacket(packet);
         System.out.println("sendMessage in GooseSender");
-        handle.close();
     }
 }

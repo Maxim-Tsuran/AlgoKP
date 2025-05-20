@@ -23,9 +23,7 @@ public class Main {
     static GooseSender sender = new GooseSender();
     static String interfaceName = "\\Device\\NPF_{DC89E044-6CBE-456B-A821-CF4675479649}";
     static byte[] lastSentData;
-    //    static int[] retransmitIntervals = {4, 4, 4, 4, 8, 16, 32}; // мс
-    //не успевает программа обрабатывать так быстро сообщения как требует нтд
-    static int[] retransmitIntervals = {200, 200, 200, 200, 400, 600, 800}; // мс
+    static int[] retransmitIntervals = {4, 4, 4, 4, 8, 16, 32}; // мс
     static int retransmitIndex = -1;
     static Timer timer = new Timer();
     static boolean flag = false;
