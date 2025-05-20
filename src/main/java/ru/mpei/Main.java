@@ -24,7 +24,7 @@ public class Main {
     static String interfaceName = "\\Device\\NPF_{DC89E044-6CBE-456B-A821-CF4675479649}";
     static byte[] lastSentData;
     //    static int[] retransmitIntervals = {4, 4, 4, 4, 8, 16, 32}; // мс
-    //не успевает программа обрабатывать так быстро сообщения как требует гост
+    //не успевает программа обрабатывать так быстро сообщения как требует нтд
     static int[] retransmitIntervals = {200, 200, 200, 200, 400, 600, 800}; // мс
     static int retransmitIndex = -1;
     static Timer timer = new Timer();
@@ -69,7 +69,7 @@ public class Main {
                         flag = false;
                         retransmitIndex = 0; // начинаем режим пересылки
                         sendGoose(); // отправка сразу
-                        System.out.println("000000000000000000000000000000000");
+                        System.out.println("Первое приоритетное сообщение");
                     }
 
                 } catch (Exception e) {
@@ -86,7 +86,7 @@ public class Main {
                 try {
                     if (retransmitIndex >= 0) {
                         sendGoose();
-                        System.out.println("11111111111111111111111111111111111111111111111111111111");
+                        System.out.println("приоритетное сообщение");
                         retransmitIndex++;
                         if (retransmitIndex >= retransmitIntervals.length) {
                             retransmitIndex = -1;
@@ -96,7 +96,7 @@ public class Main {
                         }
                     } else {
                         sendGoose();
-                        System.out.println("222222222222222222222222222222222222222222222222222222");
+                        System.out.println("Дефолтное сообщение");
 
                         startSendingLoop(1000); // регулярный вызов
                     }

@@ -34,7 +34,7 @@ public class GooseSender {
         UnknownPacket packet = UnknownPacket.newPacket(data, 0, data.length);
 
         handle.sendPacket(packet);
-        System.out.println("sendMessageeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
+        System.out.println("sendMessage in GooseSender");
         handle.close();
     }
 }

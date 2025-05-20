@@ -226,7 +226,4 @@ public class GooseMessageBuilder {
             throw new RuntimeException("Ошибка парсинга времени: " + t, e);
         }
     }
-
-
-
 }
